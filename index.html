@@ -1,15 +1,100 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100%;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      .control-panel {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 10000;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 20px;
+        border-radius: 12px;
+        color: white;
+        font-family: Arial, sans-serif;
+        width: 400px;
+        max-width: calc(100vw - 40px);
+      }
+
+      .control-panel h3 {
+        margin: 0 0 15px 0;
+        color: white;
+        font-size: 18px;
+      }
+
+      .control-panel .form-group {
+        margin-bottom: 15px;
+      }
+
+      .control-panel label {
+        display: block;
+        margin-bottom: 5px;
+        color: white;
+      }
+
+      .control-panel select,
+      .control-panel input {
+        width: 100%;
+        padding: 10px 8px;
+        border-radius: 4px;
+        border: none;
+        margin-bottom: 5px;
+        font-size: 16px;
+      }
+
+      .control-panel button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        min-height: 44px;
+      }
+
+      @media (max-width: 600px) {
+        .control-panel {
+          top: max(12px, env(safe-area-inset-top));
+          left: max(12px, env(safe-area-inset-left));
+          right: max(12px, env(safe-area-inset-right));
+          width: auto;
+          max-width: none;
+          padding: 16px;
+        }
+      }
+    </style>
     <script>
       function getQueryParam(param) {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get(param);
       }
 
+      function getApParam() {
+        return getQueryParam("ap") || getQueryParam("id");
+      }
+
       function validateEnvironment() {
         const env = getQueryParam("env");
-        const ap = getQueryParam("ap");
+        const ap = getApParam();
         const allowedEnvs = ["dev", "staging", "prod"];
 
         let hasErrors = false;
@@ -36,28 +121,22 @@
 
         // Always show the form for parameter management
         const container = document.createElement("div");
-        container.style.cssText =
-          "position: fixed; top: 20px; left: 20px; z-index: 10000; background: rgba(0,0,0,0.9); padding: 20px; border-radius: 12px; color: white; font-family: Arial, sans-serif; min-width: 400px;";
+        container.className = "control-panel";
 
         const title = document.createElement("h3");
         title.textContent =
           env && ap ? "Update Parameters" : "Missing Required Parameters";
-        title.style.cssText = "margin: 0 0 15px 0; color: white;";
         container.appendChild(title);
 
         // Environment input - always show
         const envGroup = document.createElement("div");
-        envGroup.style.cssText = "margin-bottom: 15px;";
+        envGroup.className = "form-group";
 
         const envLabel = document.createElement("label");
         envLabel.textContent = "Environment:";
-        envLabel.style.cssText =
-          "display: block; margin-bottom: 5px; color: white;";
         envGroup.appendChild(envLabel);
 
         const envSelect = document.createElement("select");
-        envSelect.style.cssText =
-          "width: 100%; padding: 8px; border-radius: 4px; border: none; margin-bottom: 5px;";
         envSelect.innerHTML = `
           <option value="">Select environment...</option>
           <option value="dev" ${env === "dev" ? "selected" : ""}>dev</option>
@@ -72,20 +151,16 @@
 
         // AP input - always show
         const apGroup = document.createElement("div");
-        apGroup.style.cssText = "margin-bottom: 15px;";
+        apGroup.className = "form-group";
 
         const apLabel = document.createElement("label");
         apLabel.textContent = "AP Parameter:";
-        apLabel.style.cssText =
-          "display: block; margin-bottom: 5px; color: white;";
         apGroup.appendChild(apLabel);
 
         const apInput = document.createElement("input");
         apInput.type = "text";
         apInput.placeholder = "Enter AP value...";
         apInput.value = ap || "";
-        apInput.style.cssText =
-          "width: 100%; padding: 8px; border-radius: 4px; border: none; margin-bottom: 5px; box-sizing: border-box;";
         apGroup.appendChild(apInput);
 
         container.appendChild(apGroup);
@@ -94,8 +169,6 @@
         const updateBtn = document.createElement("button");
         updateBtn.textContent =
           env && ap ? "Update Parameters" : "Add Parameters";
-        updateBtn.style.cssText =
-          "background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; width: 100%;";
         updateBtn.onclick = function () {
           const newEnv = container.querySelector("select")?.value || env;
           const newAp = container.querySelector("input")?.value || ap;
@@ -104,6 +177,7 @@
             const url = new URL(window.location);
             url.searchParams.set("env", newEnv);
             url.searchParams.set("ap", newAp);
+            url.searchParams.set("id", newAp);
             window.location.href = url.toString();
           } else {
             alert("Please fill in all required fields");
@@ -117,8 +191,11 @@
         return hasErrors;
       }
 
-      const idFromUrl = getQueryParam("id") || "21";
-      window.YONDER__CLIENT_CODE = idFromUrl;
+      const apFromUrl = getApParam();
+
+      if (apFromUrl) {
+        window.YONDER__CLIENT_CODE = String(apFromUrl);
+      }
 
       function loadWidgetScript() {
         const env = getQueryParam("env");
@@ -148,7 +225,7 @@
         validateEnvironment();
 
         // Only load widget script if validation passes
-        if (getQueryParam("env") && getQueryParam("ap")) {
+        if (getQueryParam("env") && getApParam()) {
           loadWidgetScript();
         }
       });
